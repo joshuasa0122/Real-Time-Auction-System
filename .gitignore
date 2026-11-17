@@ -1,0 +1,8 @@
+out/
+bin/
+*.class
+.metadata/
+.DS_Store
+.env
+.env.*
+*.log
