@@ -6,3 +6,8 @@ bin/
 .env
 .env.*
 *.log
+.settings/
+.classpath
+.project
+.idea/
+*.iml
