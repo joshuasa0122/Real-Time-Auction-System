@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Real-time Auction</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="banner" role="alert" hidden>Disconnected from the server. Reload the page to reconnect.</div>
+
+<header>
+  <strong>Real-time Auction</strong>
+  <p id="account" hidden><span id="user"></span> <span class="muted">Balance</span> <b id="balance"></b></p>
+</header>
+
+<main id="login" hidden>
+  <form id="login-form">
+    <h1>Log in</h1>
+    <label>Name <input id="name" required autocomplete="off" autofocus></label>
+    <button class="primary">Log in</button>
+    <p class="error" id="login-error" role="alert"></p>
+  </form>
+</main>
+
+<main id="lobby" hidden>
+  <section>
+    <div class="row"><h1>Open auctions</h1><button id="refresh" type="button">Refresh</button></div>
+    <table>
+      <thead><tr><th>Auction</th><th>Current price</th><th>Time left</th><th></th></tr></thead>
+      <tbody id="auctions"></tbody>
+    </table>
+    <p id="empty" class="muted">No open auctions.</p>
+    <p class="error" id="lobby-error" role="alert"></p>
+  </section>
+  <form id="create-form">
+    <h2>Create an auction</h2>
+    <label>Item <input id="item" required autocomplete="off"></label>
+    <label>Starting price <input id="price" type="number" min="1" step="1" required></label>
+    <label>Duration (seconds) <input id="duration" type="number" min="1" step="1" value="60" required></label>
+    <button class="primary">Create and join</button>
+    <p class="error" id="create-error" role="alert"></p>
+  </form>
+</main>
+
+<main id="room" hidden>
+  <section>
+    <div class="row">
+      <h1><span id="room-item"></span> <span class="muted" id="room-id"></span></h1>
+      <button id="leave" type="button">Back to lobby</button>
+    </div>
+    <div id="numbers">
+      <div><h2>Current price</h2><p class="big" id="room-price"></p></div>
+      <div><h2>Time left</h2><p class="big" id="room-time"></p></div>
+    </div>
+    <p>Highest bidder: <b id="room-leader"></b></p>
+    <p id="status" role="status"></p>
+
+    <form id="bid-form">
+      <label>Your bid <input id="amount" type="number" step="1" required></label>
+      <button class="primary">Place bid</button>
+      <div id="quick">
+        <button type="button" data-add="10">+10</button>
+        <button type="button" data-add="50">+50</button>
+        <button type="button" data-add="100">+100</button>
+      </div>
+    </form>
+    <p class="error" id="bid-error" role="alert"></p>
+    <div id="dev" hidden>
+      <span class="muted">Fake events (dev only)</span>
+      <button type="button">OUTBID</button><button type="button">CLOSING</button><button type="button">CLOSED</button>
+      <button type="button">WON</button><button type="button">SOLD</button>
+    </div>
+  </section>
+  <aside>
+    <h2>Events pushed by the server</h2>
+    <ol id="feed"></ol>
+  </aside>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

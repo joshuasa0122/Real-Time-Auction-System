@@ -1,0 +1,68 @@
+:root { --ink: #16191d; --muted: #606871; --line: #d3d7db; --bg: #fff; --soft: #f3f4f5; --accent: #c2331c; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; height: 100vh; display: flex; flex-direction: column; color: var(--ink); background: var(--bg);
+       font: 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+h1 { font-size: 24px; margin: 0; overflow-wrap: anywhere; }
+h2 { font-size: 15px; margin: 0; color: var(--muted); font-weight: 600; }
+p { margin: 0; }
+.muted { color: var(--muted); font-weight: 400; }
+.error { color: var(--accent); font-weight: 600; min-height: 24px; }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+
+#banner { background: var(--ink); color: #fff; padding: 10px 24px; font-weight: 600; text-align: center; }
+header { display: flex; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid var(--line); }
+#user { font-weight: 600; margin-right: 16px; }
+#balance, table, .big, #feed time { font-variant-numeric: tabular-nums; }
+
+main { flex: 1; min-height: 0; padding: 24px; width: 100%; max-width: 1280px; margin: 0 auto; }
+label { display: block; color: var(--muted); font-size: 14px; }
+input { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; color: var(--ink);
+        border: 1px solid #8a929a; border-radius: 4px; background: #fff; }
+button { font: inherit; font-weight: 600; padding: 10px 16px; border: 1px solid var(--ink); border-radius: 4px;
+         background: #fff; color: var(--ink); cursor: pointer; white-space: nowrap; }
+button:hover:enabled { background: var(--soft); }
+.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.primary:hover:enabled { background: #a02814; }
+button:disabled, input:disabled { opacity: .4; cursor: not-allowed; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+#login form { max-width: 360px; margin: 8vh auto 0; display: grid; gap: 16px; }
+
+#lobby { display: grid; grid-template-columns: 1fr 320px; gap: 48px; overflow: auto; align-content: start; }
+#lobby form { display: grid; gap: 16px; align-content: start; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-size: 14px; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--soft); }
+td:last-child { text-align: right; }
+
+#room { display: grid; grid-template-columns: 1fr 420px; gap: 40px; }
+#room > section { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+#numbers { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.big { font-size: 80px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.big.long { font-size: 48px; }
+#room-leader { overflow-wrap: anywhere; }
+#status { padding: 14px 16px; border: 2px solid var(--line); border-radius: 4px; font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+#status.leading, #status.ended { background: var(--ink); border-color: var(--ink); color: #fff; }
+#status.outbid { background: var(--accent); border-color: var(--accent); color: #fff; }
+#room-time.closing { color: var(--accent); }
+#bid-form { display: flex; align-items: end; gap: 12px; flex-wrap: wrap; }
+#amount { width: 160px; }
+#quick { display: flex; gap: 8px; }
+#dev { font-size: 13px; }
+#dev button { padding: 4px 8px; margin-left: 6px; font-size: 13px; }
+aside { display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); padding-left: 24px; }
+#feed { list-style: none; margin: 12px 0 0; padding: 0; overflow-y: auto; flex: 1; }
+#feed li { padding: 9px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+#feed time { color: var(--muted); font-size: 13px; margin-right: 8px; }
+#feed p { font-size: 15px; }
+#feed .OUTBID b, #feed .CLOSING b { color: var(--accent); }
+
+@media (max-width: 900px) {
+  body { height: auto; min-height: 100vh; }
+  #lobby, #room { grid-template-columns: 1fr; }
+  aside { border-left: 0; padding-left: 0; }
+  .big { font-size: 48px; }
+}
