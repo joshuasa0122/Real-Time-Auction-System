@@ -141,6 +141,7 @@ async function join(id) {
   }
   if (res.code === 200) {
     room.item = res.headers.Item || id;
+    setSecondsLeft(id, res.headers.SecondsLeft);
     applyPrice(room, res.headers.Price, res.headers.Leader);
   }
   return res;
@@ -170,6 +171,7 @@ function bid(amount) {
     if (res.code !== 200) { fail(errorText(res, room)); return; }
     room.mine = true;
     applyPrice(room, res.headers.Price, state.user);
+    if (res.headers.Balance !== undefined) state.balance = res.headers.Balance;
     $("amount").value = "";
   });
 }
@@ -268,8 +270,9 @@ function render() {
     const [cls, text] = status(room);
     $("status").className = cls;
     setText("status", text);
-    $("amount").min = room.price + 1;
-    $("amount").placeholder = `${room.price + 1} or more`;
+    const min = isUser(room.leader) ? room.price + 1 : room.price;   // the first bid may equal the start price
+    $("amount").min = min;
+    $("amount").placeholder = `${num(min)} or more`;
   }
   renderClocks();
 
