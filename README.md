@@ -1,4 +1,4 @@
-# Real-time Auction System — skeleton
+# Real-time Auction System
 
 Computer Networking term project. Java 17, standard library only. Runs locally; nothing is deployed.
 
@@ -38,7 +38,7 @@ WsGateway to the project root so it finds `web/`.
 |---|---|---|
 | `protocol` (Message, MessageIO) | 정유성 | Done. Change only after the team agrees |
 | `server` (accept, handler threads, SessionRegistry, NetworkEventSink) | 정유성 | Done: per-client queue and writer thread, disconnect handling, `Log`, `test/server/SlowClientTest` |
-| `auction` (AuctionService, EventSink) | 변예서 | **Interfaces fixed.** `StubAuctionService` is a placeholder to replace |
+| `auction` (AuctionService, EventSink, RealAuctionService) | 변예서 | **Interfaces fixed.** Done: accounts, per-auction bid queue, close timer. `StubAuctionService` is only used by `SlowClientTest` |
 | `gateway` (WsGateway) | 전의령 | Working relay; add reconnect / error display as needed |
 | `tools` (TestClient) | 전의령 | Base for bid bots and multi-client tests |
 | `web` (protocol.js, app.js, index.html, style.css) | 정유성 | Done: login, lobby, auction room. `?dev` shows fake-event buttons |
@@ -53,23 +53,28 @@ Rule from slide 11: nobody edits another member's package. Cross-package changes
 | `LOGIN` | `Name` | `Balance` |
 | `LIST` | – | `Auctions` = `id:price:secondsLeft,...` |
 | `CREATE` | `Item`, `Price`, `Duration` (s) | `Auction` |
-| `JOIN` | `Auction` | `Auction`, `Item`, `Price`, `Leader` |
-| `BID` | `Auction`, `Amount` | `Auction`, `Price` |
+| `JOIN` | `Auction` | `Auction`, `Item`, `Price`, `Leader`, `SecondsLeft` |
+| `BID` | `Auction`, `Amount` | `Auction`, `Price`, `Balance` |
 
-Errors: `400` bad arguments or not logged in, `404` unknown auction or account,
-`409` bid too low / not enough money / name already online, `500` bug on the server side.
-Every error carries an `Error` header with the reason.
+Errors: `400` bad arguments, not logged in, or the seller bidding on their own auction,
+`404` unknown or closed auction, `409` bid too low / not enough money / name already online,
+`500` bug on the server side. Every error carries an `Error` header with the reason.
+
+Rules: every new user starts with 1000. `Balance` is the money still available, after the holds of
+bids that are currently leading. The first bid may equal the start price; every later bid must be higher.
+`Leader` / `Winner` is `-` when nobody has bid.
 
 | Event | Sent to | Headers |
 |---|---|---|
 | `NEW_BID` | everyone in the auction | `Auction`, `Price`, `Leader` |
-| `OUTBID` | previous leader | `Auction`, `Price`, `Leader` |
-| `CLOSING` | everyone in the auction | `Auction`, `SecondsLeft` (TODO 변예서) |
-| `CLOSED` | everyone in the auction | `Auction`, `Winner`, `Price` (TODO 변예서) |
-| `WON` / `SOLD` | winner / seller | `Auction`, `Price`, `Balance` (TODO 변예서) |
+| `OUTBID` | previous leader | `Auction`, `Price`, `Leader`, `Balance` |
+| `CLOSING` | everyone in the auction | `Auction`, `SecondsLeft` (10 s before the end; none for auctions of 10 s or less) |
+| `CLOSED` | everyone in the auction | `Auction`, `Winner`, `Price` |
+| `WON` / `SOLD` | winner / seller (only when there is a winner) | `Auction`, `Price`, `Balance` |
 
-Note: in the stub, `NEW_BID` reaches the bidder just before its own `RES`. Clients must not assume
-an order; they match `RES` by id (slide 7). 변예서 may choose to send the `RES` first.
+Note: `NEW_BID` reaches the bidder just before its own `RES`. Clients must not assume an order;
+they match `RES` by id (slide 7). Events of one auction are sent from that auction's own thread
+(`auction-a1`), so everyone receives them in the same order.
 
 ## Threads and the server log
 
@@ -87,6 +92,12 @@ Test: `javac -d out --release 17 $(find src test -name "*.java") && java -cp out
 
 Open questions between members: `docs/requests.md`.
 
+## Verified on 2026-11-26 (with RealAuctionService)
+
+- Three browser tabs: create, join, bid, `OUTBID`, low bid → `409`, `CLOSING`, `CLOSED`, `WON`, `SOLD`, balances
+- Holds: raising your own bid holds only the difference; being outbid releases the hold; not enough money → `409`
+- 20 clients bidding at once on 3 auctions: same `NEW_BID` order for everyone, one winner, total money unchanged
+
 ## Verified on 2026-11-25
 
 - Two console clients: login, create, join, bid, outbid → `OUTBID` and `NEW_BID` pushed, low bid → `409`
@@ -94,7 +105,6 @@ Open questions between members: `docs/requests.md`.
 - `GET /` serves the page; `/../` path traversal → `404`; gateway listens on 127.0.0.1 only
 - `SlowClientTest`: 30000 bids while one client never reads; no delay for others, only that client is dropped
 - Three browser tabs (seller, two bidders): create, join, bid, `OUTBID`, low bid → `409`, one tab closed
-- Not yet: the real `AuctionService` (`CLOSING` / `CLOSED` / `WON` / `SOLD` end to end)
 
 ## 협업
 
