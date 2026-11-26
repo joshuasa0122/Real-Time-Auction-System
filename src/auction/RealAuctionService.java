@@ -144,7 +144,7 @@ public class RealAuctionService implements AuctionService {
     /** Runs only on the auction's own thread, one bid at a time. */
     private Result processBid(Auction a, String user, long amount) {
         if (a.closed) return Result.notFound("Auction " + a.id + " is closed");
-        if (user.equals(a.seller)) return Result.badRequest("Seller cannot bid on own auction");
+        if (user.equals(a.seller)) return Result.conflict("Seller cannot bid on own auction");
 
         Auction.Top t = a.top;
         boolean tooLow = a.hasLeader() ? amount <= t.price() : amount < t.price();

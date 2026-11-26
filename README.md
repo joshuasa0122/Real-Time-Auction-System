@@ -56,8 +56,8 @@ Rule from slide 11: nobody edits another member's package. Cross-package changes
 | `JOIN` | `Auction` | `Auction`, `Item`, `Price`, `Leader`, `SecondsLeft` |
 | `BID` | `Auction`, `Amount` | `Auction`, `Price`, `Balance` |
 
-Errors: `400` bad arguments, not logged in, or the seller bidding on their own auction,
-`404` unknown or closed auction, `409` bid too low / not enough money / name already online,
+Errors: `400` bad arguments or not logged in, `404` unknown or closed auction,
+`409` bid too low / not enough money / name already online / seller bidding on their own auction,
 `500` bug on the server side. Every error carries an `Error` header with the reason.
 
 Rules: every new user starts with 1000. `Balance` is the money still available, after the holds of
