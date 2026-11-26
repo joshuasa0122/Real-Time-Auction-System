@@ -67,7 +67,7 @@ public class RealAuctionService implements AuctionService {
     public Result list() {
         StringJoiner sj = new StringJoiner(",");
         for (Auction a : auctions.values()) {
-            if (!a.closed) sj.add(a.id + ":" + a.price + ":" + a.secondsLeft());
+            if (!a.closed) sj.add(a.id + ":" + a.top.price() + ":" + a.secondsLeft());
         }
         return Result.ok().header("Auctions", sj.toString());
     }
@@ -108,11 +108,12 @@ public class RealAuctionService implements AuctionService {
     public Result join(String user, String auctionId) {
         Auction a = auctions.get(auctionId);
         if (a == null || a.closed) return Result.notFound("No open auction " + auctionId);
+        Auction.Top t = a.top;                       // one read: price and leader of the same bid
         return Result.ok()
                 .header("Auction", a.id)
                 .header("Item", a.item)
-                .header("Price", a.price)
-                .header("Leader", a.leader)
+                .header("Price", t.price())
+                .header("Leader", t.leader())
                 .header("SecondsLeft", a.secondsLeft());
     }
 
@@ -145,20 +146,20 @@ public class RealAuctionService implements AuctionService {
         if (a.closed) return Result.notFound("Auction " + a.id + " is closed");
         if (user.equals(a.seller)) return Result.badRequest("Seller cannot bid on own auction");
 
-        boolean tooLow = a.hasLeader() ? amount <= a.price : amount < a.price;
-        if (tooLow) return Result.conflict("Bid too low, must be higher than " + a.price);
+        Auction.Top t = a.top;
+        boolean tooLow = a.hasLeader() ? amount <= t.price() : amount < t.price();
+        if (tooLow) return Result.conflict("Bid too low, must be higher than " + t.price());
 
         Account bidder = account(user);
-        boolean raisingOwnBid = user.equals(a.leader);
-        long needed = raisingOwnBid ? amount - a.price : amount;
+        boolean raisingOwnBid = user.equals(t.leader());
+        long needed = raisingOwnBid ? amount - t.price() : amount;
         if (!bidder.hold(needed)) {
             return Result.conflict("Not enough balance (available " + bidder.available() + ")");
         }
 
-        String previous = a.leader;
-        long previousPrice = a.price;
-        a.price = amount;
-        a.leader = user;
+        String previous = t.leader();
+        long previousPrice = t.price();
+        a.top = new Auction.Top(amount, user);   // price and leader change in one write
 
         // Give the previous leader their money back and tell them
         if (!previous.equals("-") && !raisingOwnBid) {
@@ -187,24 +188,25 @@ public class RealAuctionService implements AuctionService {
     private void close(Auction a) {
         a.closed = true;
         a.queue.shutdown();   // later bids are rejected; bids already queued see closed = true
+        Auction.Top t = a.top;
 
         events.toAuction(a.id, Message.evt("CLOSED")
                 .header("Auction", a.id)
-                .header("Winner", a.leader)       // "-" when nobody bid
-                .header("Price", a.price));
+                .header("Winner", t.leader())     // "-" when nobody bid
+                .header("Price", t.price()));
 
         if (a.hasLeader()) {
-            Account winner = account(a.leader);
+            Account winner = account(t.leader());
             Account seller = account(a.seller);
-            winner.pay(a.price);
-            seller.receive(a.price);
-            events.toUser(a.leader, Message.evt("WON")
+            winner.pay(t.price());
+            seller.receive(t.price());
+            events.toUser(t.leader(), Message.evt("WON")
                     .header("Auction", a.id)
-                    .header("Price", a.price)
+                    .header("Price", t.price())
                     .header("Balance", winner.available()));
             events.toUser(a.seller, Message.evt("SOLD")
                     .header("Auction", a.id)
-                    .header("Price", a.price)
+                    .header("Price", t.price())
                     .header("Balance", seller.available()));
         }
         auctions.remove(a.id);
