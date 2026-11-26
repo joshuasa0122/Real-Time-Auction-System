@@ -2,7 +2,7 @@ package server;
 
 import auction.AuctionService;
 import auction.EventSink;
-import auction.StubAuctionService;
+import auction.RealAuctionService;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -25,7 +25,7 @@ public class AuctionServer {
 
         SessionRegistry sessions = new SessionRegistry();
         EventSink events = new NetworkEventSink(sessions);
-        AuctionService auctions = new StubAuctionService(events);   // TODO(변예서): swap in the real service
+        AuctionService auctions = new RealAuctionService(events);
 
         try (ServerSocket server = new ServerSocket(port)) {
             Log.info("listening on port " + port);
