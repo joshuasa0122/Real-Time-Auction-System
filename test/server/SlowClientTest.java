@@ -1,15 +1,21 @@
 package server;
 
+import auction.AuctionService;
+import auction.StubAuctionService;
 import protocol.Message;
 import protocol.MessageIO;
 
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 /**
  * A client that joins and never reads must not delay anyone else, and is disconnected in the end.
  * Also checks that a connection reset frees the name.
+ *
+ * Runs the server with StubAuctionService (unlimited money, the seller may bid) because this tests
+ * the network side only, not the auction rules.
  *
  * Run: javac -d out --release 17 $(find src test -name "*.java") && java -cp out server.SlowClientTest
  *
@@ -69,8 +75,15 @@ public class SlowClientTest {
 
     public static void main(String[] args) throws Exception {
         Thread server = new Thread(() -> {
-            try { AuctionServer.main(new String[] {"" + PORT}); } catch (IOException e) { e.printStackTrace(); }
+            SessionRegistry sessions = new SessionRegistry();
+            AuctionService stub = new StubAuctionService(new NetworkEventSink(sessions));
+            try (ServerSocket ss = new ServerSocket(PORT)) {             // same accept loop as AuctionServer
+                for (int n = 1; ; n++) new Thread(new ClientHandler(n, ss.accept(), stub, sessions), "handler-" + n).start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         });
+        server.setDaemon(true);
         server.start();
         Thread.sleep(500);
 
