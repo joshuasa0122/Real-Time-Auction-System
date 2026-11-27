@@ -6,7 +6,7 @@ Computer Networking term project. Java 17, standard library only. Runs locally; 
 browser tab ──WebSocket──▶ WsGateway ──TCP──▶ AuctionServer ──▶ AuctionService (auction logic)
  (web/)        :8081         (gateway)          :5000             (auction)
                                  ▲
-tools.TestClient ──TCP───────────┘ (console client / bid bots connect straight to :5000)
+tools.TestClient, BidBot ──TCP───┘ (console client / bid bots connect straight to :5000)
 ```
 
 ## Run (three terminals, from the project root)
@@ -17,6 +17,7 @@ javac -d out --release 17 $(find src -name "*.java")     # Windows: compile in E
 java -cp out server.AuctionServer          # 1. server on :5000
 java -cp out gateway.WsGateway             # 2. gateway + web page on http://localhost:8081
 java -cp out tools.TestClient              # 3. optional console client (login NAME, create ..., bid ...)
+java -cp out tools.BidBot bot1 a1 500 10   # 4. optional bid bot: NAME AUCTION MAX [STEP] [host] [port]
 ```
 
 macOS: AirPlay Receiver already uses port 5000, so the server stops with `Address already in use`.
@@ -26,6 +27,7 @@ Turn it off (System Settings > General > AirDrop & Handoff) or use another port 
 java -cp out server.AuctionServer 5050
 java -cp out gateway.WsGateway 8081 localhost 5050
 java -cp out tools.TestClient localhost 5050
+java -cp out tools.BidBot bot1 a1 500 10 localhost 5050
 ```
 
 Open http://localhost:8081 in two or three browser tabs: each tab is one bidder.
@@ -39,8 +41,8 @@ WsGateway to the project root so it finds `web/`.
 | `protocol` (Message, MessageIO) | 정유성 | Done. Change only after the team agrees |
 | `server` (accept, handler threads, SessionRegistry, NetworkEventSink) | 정유성 | Done: per-client queue and writer thread, disconnect handling, `Log`, `test/server/SlowClientTest` |
 | `auction` (AuctionService, EventSink, RealAuctionService) | 변예서 | **Interfaces fixed.** Done: accounts, per-auction bid queue, close timer. `StubAuctionService` is only used by `SlowClientTest` |
-| `gateway` (WsGateway) | 전의령 | Working relay; add reconnect / error display as needed |
-| `tools` (TestClient) | 전의령 | Base for bid bots and multi-client tests |
+| `gateway` (WsGateway) | 전의령 | Done: relay, one close frame per connection, separate log for "cannot reach server" and "connection lost" |
+| `tools` (TestClient, BidBot) | 전의령 | Done: console client that matches `RES` by id; bid bot that outbids others by STEP up to MAX |
 | `web` (protocol.js, app.js, index.html, style.css) | 정유성 | Done: login, lobby, auction room. `?dev` shows fake-event buttons |
 
 Rule from slide 11: nobody edits another member's package. Cross-package changes go through
@@ -91,6 +93,12 @@ disconnected, and nobody else waits for it.
 Test: `javac -d out --release 17 $(find src test -name "*.java") && java -cp out server.SlowClientTest`
 
 Open questions between members: `docs/requests.md`.
+
+## Verified on 2026-11-27 (all members' code merged)
+
+- `SlowClientTest` passes; 20 clients on 3 auctions keep the total money unchanged
+- Three browser tabs from create to `WON` / `SOLD`; no browser console errors, also when the server is stopped
+- Two `BidBot`s and a browser tab bid on one auction: each bot stops at its MAX, one winner, the tab shows every bid and the result
 
 ## Verified on 2026-11-26 (with RealAuctionService)
 
