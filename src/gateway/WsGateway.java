@@ -24,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Bridge between the browser and the auction server, using only the standard library.
@@ -158,7 +159,18 @@ public class WsGateway {
     /** Relays between one WebSocket and one new TCP connection to the auction server. */
     private void bridge(InputStream wsIn, OutputStream wsOut) throws IOException {
         String name = Thread.currentThread().getName();
-        try (Socket server = new Socket(serverHost, serverPort)) {
+        Socket connection;
+        try {
+            connection = new Socket(serverHost, serverPort);
+        } catch (IOException e) {
+            System.out.println("[" + name + "] cannot reach auction server: " + e.getMessage());
+            sendClose(wsOut);
+            System.out.println("[" + name + "] browser disconnected");
+            return;
+        }
+
+        AtomicBoolean closeSent = new AtomicBoolean();       // at most one close frame per WebSocket
+        try (Socket server = connection) {
             System.out.println("[" + name + "] bridged to " + serverHost + ":" + serverPort);
             Writer toServer = new OutputStreamWriter(server.getOutputStream(), StandardCharsets.UTF_8);
             BufferedReader fromServer = new BufferedReader(new InputStreamReader(server.getInputStream(), StandardCharsets.UTF_8));
@@ -173,7 +185,7 @@ public class WsGateway {
                 } catch (IOException | ProtocolException e) {
                     // connection closed
                 } finally {
-                    try { sendClose(wsOut); } catch (IOException ignored) {}
+                    try { sendCloseOnce(wsOut, closeSent); } catch (IOException ignored) {}
                 }
             }, name + "-receiver");
             receiver.setDaemon(true);
@@ -188,8 +200,8 @@ public class WsGateway {
                 int opcode = b0 & 0x0F;
                 byte[] payload = readPayload(wsIn);
 
-                if (opcode == 0x8) {                       // close
-                    sendClose(wsOut);
+                if (opcode == 0x8) {                       // close, or the browser's answer to ours
+                    sendCloseOnce(wsOut, closeSent);
                     break;
                 } else if (opcode == 0x9) {                // ping -> pong
                     sendFrame(wsOut, 0xA, payload);
@@ -203,9 +215,9 @@ public class WsGateway {
                     }
                 }
             }
-        } catch (IOException e) {
-            System.out.println("[" + name + "] cannot reach auction server: " + e.getMessage());
-            try { sendClose(wsOut); } catch (IOException ignored) {}
+        } catch (IOException e) {                            // browser or server dropped during the relay
+            System.out.println("[" + name + "] connection lost: " + e.getMessage());
+            try { sendCloseOnce(wsOut, closeSent); } catch (IOException ignored) {}
         }
         System.out.println("[" + name + "] browser disconnected");
     }
@@ -250,6 +262,11 @@ public class WsGateway {
 
     private static void sendClose(OutputStream out) throws IOException {
         sendFrame(out, 0x8, new byte[0]);
+    }
+
+    /** Both relay threads may want to close; RFC 6455 allows only one close frame from our side. */
+    private static void sendCloseOnce(OutputStream out, AtomicBoolean sent) throws IOException {
+        if (sent.compareAndSet(false, true)) sendClose(out);
     }
 
     /** Server-to-browser frames are never masked. Synchronized so two threads cannot interleave frames. */
